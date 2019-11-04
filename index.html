@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- development version, includes helpful console warnings -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="moment.min.js"></script>
+    <link
+            rel="stylesheet"
+            href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+            integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+            crossorigin="anonymous"
+    >
+    <style>
+        td {
+            text-align: center;
+        }
+        th>input{
+            width:100%;
+        }
+        .holiday {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div>
+        <input type="date" v-model="currentSprint.start">
+        <input type="date" v-model="currentSprint.end">
+        <div>
+            {{currentDay}}
+        </div>
+    </div>
+    <table>
+        <thead>
+        <th>
+            Name
+        </th>
+        <th v-for="(day,i) in days" style="text-align: center" v-bind:class="{holiday:isHoliday(i)}">
+            {{moment(day)}}
+            <br/>
+            <span
+                    class="badge badge-pill badge-primary"
+                    v-for="(event,ei) in events[i]" :key="ei"
+                    @click="remveDayEvent(i,ei)"
+            >
+                {{event}}
+            </span>
+            <br/>
+            <input type="number" :name=newDayEventName(i)>
+            <button @click="newDayEvent(i)">ADD</button>
+        </th>
+        </thead>
+        <tbody>
+        <tr v-for="(user, id) in users">
+            <td>{{user.name}}</td>
+            <td v-for="(day,i) in days" v-bind:class="{holiday:isHoliday(i)}" @click="currentDay=day">
+                <span
+                        class="badge badge-pill badge-success"
+                        @click="removeUserEvent(id, i,ei)"
+                        v-for="(value,ei) in user.events[i]"
+                >
+                    {{value}}
+                </span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div>
+        <b>Capacity:</b>{{currentCapacity}}
+    </div>
+</div>
+<script language="JavaScript">
+    var app = new Vue({
+        el: '#app',
+        data: {
+            currentDay: null,
+            lastSprint: {
+                capacity: 50, //MD
+                storyPoints: 22
+            },
+            currentSprint: {
+                manday: 8,
+                start: "2019-10-13",
+                end: "2019-10-20",
+            },
+            users: {
+                'sadfjhgsafd': {
+                    name: 'Mirek',
+                    events: {
+                        1571176800000: [3]
+                    }
+                }, 'dczxc': {
+                    name: 'Kamil',
+                    events: {
+                        1570917600000: [2, 2]
+                    }
+                }
+            },
+            holidays: [],
+            events: {
+                1570917600000: [2]
+            }, //events per day
+        },
+        computed: {
+            days() {
+                const cs = this.currentSprint;
+                const [a, b] = [cs.start, cs.end];
+                //
+                // let start = new Date(a).getTime() < new Date(b).getTime() ? new Date(a) : new Date(b);
+                // let end = start.getTime() === new Date(a).getTime() ? new Date(b) : new Date(a);
+
+                let [start, end] = [new Date(a), new Date(b)];
+
+                let days = {};
+                start.setHours(0);
+
+                console.log('recalculating');
+
+                while (start.getTime() <= end.getTime()) {
+                    days[start.getTime()] = new Date(start.getTime());
+                    start.setHours(24);
+                }
+
+                console.log(days);
+
+                return days;
+            },
+            currentCapacity() {
+                let [cap, uEvents, dEvents] = [0, 0, 0];
+                const m = this.currentSprint.manday || 0;
+
+                // for (day in this.days.entries) {
+                //     console.log(time, day, 'sad');
+                //     if (this.isHoliday(day)) {
+                //         return;
+                //     }
+                //     dEvents = (this.events[day] || []).reduce((a, b) => a + b, 0);
+                //     for (u in this.users) {
+                //         uEvents = (this.users[u].events[day] || []).reduce((a, b) => a + b, 0);
+                //         const e = uEvents + dEvents;
+                //         cap += e >= m ? 0 : m - e;
+                //         console.log(m - e);
+                //     }
+                //
+                // }
+                // for (i in this.days){
+                //     for((u,i) of this.users){
+                //     }
+                // }
+                return cap;
+            }
+            // sprintLength: function () {
+            //     let start = new Date(this.currentSprint.start).setHours(0, 0, 0, 0);
+            //     let end = new Date(this.currentSprint.end).setHours(0, 0, 0, 0);
+            //     let diff = Math.abs(end - start) / (1000 * 24 * 60 * 60) + 1;
+            //     console.log(start, end);
+            //     return Math.floor(diff);
+            // },
+        },
+        methods: {
+            moment(day) {
+                console.log(day);
+                return moment(day).format('DD')
+            },
+            removeUserEvent(id, day, i) {
+                this.users[id].events[day].splice(i, 1)
+            },
+            remveDayEvent(day, i) {
+                this.events[day].splice(i, 1)
+            },
+            isHoliday(i) {
+                return this.holidays[i] || false
+            },
+            newDayEventName(i) {
+                return "newDayEvent_" + i
+            },
+            newDayEvent(i) {
+                let val = document.getElementsByName(this.newDayEventName(i))[0];
+                if (val.value || null) {
+                    if (!this.events[i]) {
+                        this.$set(this.events, i, [val.value]);
+                    } else {
+                        this.events[i].push(val.value);
+                    }
+
+                    val.value = null;
+                    console.log(this.events[i]);
+                }
+
+            },
+        },
+        watch: {
+            // events: {
+            //     handler: function () {
+            //         console.log('changed');
+            //     },
+            //     deep: true
+            // }
+        }
+    })
+</script>
+</body>
+</html>
